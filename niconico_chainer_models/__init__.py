@@ -1,1 +1,1 @@
-from il2vec import Illustration2Vec
+from vgg_a import VggA

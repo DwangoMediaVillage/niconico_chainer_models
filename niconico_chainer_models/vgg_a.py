@@ -1,32 +1,21 @@
 import chainer
+import chainer.optimizers
 
-class Illustration2Vec(object):
-    def __init__(self, PATCH_SHAPE, weight_decay=None):
-        # self.optimizer = chainer.optimizers.Adam()
-        # self.optimizer = chainer.optimizers.SGD(lr=0.01)
-        self.optimizer = chainer.optimizers.AdaGrad(lr=0.01)
+class VggA(object):
+    def __init__(self, outputdim, weight_decay=None, optimizer=None):
+        if optimizer is None:
+            self.optimizer = chainer.optimizers.AdaGrad(lr=0.001)
+        else:
+            self.optimizer = optimizer
         self.weight_decay = weight_decay
-        self.functions = Functions(PATCH_SHAPE)
+        self.functions = Functions(outputdim)
         self.optimizer.setup(self.functions)
-        self.PATCH_SHAPE = PATCH_SHAPE
+        self.outputdim = outputdim
 
     def update_outputdim(self, outputdim):
         print "update {}".format(outputdim)
         self.functions.fc8=chainer.functions.Linear(4096, outputdim)
         self.optimizer.setup(self.functions)
-
-    def train(self, x_data, y_data):
-        x = chainer.Variable(x_data)
-        y = chainer.Variable(y_data, volatile=False)
-        h = self.functions.forward(x)[0]
-        self.optimizer.zero_grads()
-        # error = chainer.functions.mean_squared_error(h, y)
-        error = chainer.functions.softmax_cross_entropy(h, y) 
-        error.backward()
-        if not self.weight_decay is None:
-            self.optimizer.weight_decay(self.weight_decay)
-        self.optimizer.update()
-        return error.data
 
     def train_multi(self, x_data, y_data):
         x = chainer.Variable(x_data)
