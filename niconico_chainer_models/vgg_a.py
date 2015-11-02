@@ -13,7 +13,6 @@ class VggA(object):
         self.outputdim = outputdim
 
     def update_outputdim(self, outputdim):
-        print "update {}".format(outputdim)
         self.functions.fc8=chainer.functions.Linear(4096, outputdim)
         self.optimizer.setup(self.functions)
 
