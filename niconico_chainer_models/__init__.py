@@ -1,1 +1,1 @@
-from vgg_a import VggA
+from .vgg_a import VggA
