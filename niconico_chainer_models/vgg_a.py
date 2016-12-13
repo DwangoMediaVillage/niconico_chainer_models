@@ -1,5 +1,7 @@
 import chainer
 import chainer.optimizers
+import chainer.functions as F
+
 
 class VggA(object):
     def __init__(self, outputdim, weight_decay=None, optimizer=None):
@@ -13,7 +15,7 @@ class VggA(object):
         self.outputdim = outputdim
 
     def update_outputdim(self, outputdim):
-        self.functions.fc8=chainer.functions.Linear(4096, outputdim)
+        self.functions.fc8 = chainer.functions.Linear(4096, outputdim)
         self.optimizer.setup(self.functions)
 
     def train_multi(self, x_data, y_data):
@@ -38,6 +40,7 @@ class VggA(object):
         self.functions.to_gpu()
         self.optimizer.setup(self.functions)
 
+
 class Functions(chainer.FunctionSet):
     def __init__(self, outputdim):
         super(Functions, self).__init__(
@@ -56,7 +59,7 @@ class Functions(chainer.FunctionSet):
 
             fc6=chainer.functions.Linear(25088, 4096),
             fc7=chainer.functions.Linear(4096, 4096),
-            fc8=chainer.functions.Linear(4096, outputdim) 
+            fc8=chainer.functions.Linear(4096, outputdim)
         )
 
     def forward(self, x, train=True):
@@ -105,3 +108,51 @@ class Functions(chainer.FunctionSet):
             "h16": h16,
             "h17": h17
         }
+
+
+class VggAChain(chainer.Chain):
+    def __init__(self, outputdim):
+        super(VggAChain, self).__init__(
+            conv1_1=F.Convolution2D(3, 64, 3, stride=1, pad=1),
+
+            conv2_1=F.Convolution2D(64, 128, 3, stride=1, pad=1),
+
+            conv3_1=F.Convolution2D(128, 256, 3, stride=1, pad=1),
+            conv3_2=F.Convolution2D(256, 256, 3, stride=1, pad=1),
+
+            conv4_1=F.Convolution2D(256, 512, 3, stride=1, pad=1),
+            conv4_2=F.Convolution2D(512, 512, 3, stride=1, pad=1),
+
+            conv5_1=F.Convolution2D(512, 512, 3, stride=1, pad=1),
+            conv5_2=F.Convolution2D(512, 512, 3, stride=1, pad=1),
+
+            fc6=F.Linear(25088, 4096),
+            fc7=F.Linear(4096, 4096),
+            fc8=F.Linear(4096, outputdim)
+        )
+
+    def __call__(self, x, train=True):
+        h1 = F.relu(self.conv1_1(x))
+        h2 = F.max_pooling_2d(h1, 2, stride=2)
+
+        h3 = F.relu(self.conv2_1(h2))
+        h4 = F.max_pooling_2d(h3, 2, stride=2)
+
+        h5 = F.relu(self.conv3_1(h4))
+        h6 = F.relu(self.conv3_2(h5))
+        h7 = F.max_pooling_2d(h6, 2, stride=2)
+
+        h8 = F.relu(self.conv4_1(h7))
+        h9 = F.relu(self.conv4_2(h8))
+        h10 = F.max_pooling_2d(h9, 2, stride=2)
+
+        h11 = F.relu(self.conv5_1(h10))
+        h12 = F.relu(self.conv5_2(h11))
+        h13 = F.max_pooling_2d(h12, 2, stride=2)
+
+        h14 = F.dropout(F.relu(self.fc6(h13)), train=train, ratio=0.5)
+        h15 = F.dropout(F.relu(self.fc7(h14)), train=train, ratio=0.5)
+        h16 = self.fc8(h15)
+        y = F.sigmoid(h16)
+
+        return y
